@@ -11,6 +11,7 @@
 
 # COMMAND ----------
 
+# DBTITLE 1,Parâmetros (widgets)
 dbutils.widgets.text("mes", "2026-10", "Mês de referência (AAAA-MM)")
 dbutils.widgets.text("destino", "/Volumes/cnpj/landing/receita", "Volume de destino")
 
@@ -20,6 +21,7 @@ print(f"mes={mes}  destino={destino}")
 
 # COMMAND ----------
 
+# DBTITLE 1,Importar src
 # Torna src/ importável: o notebook roda a partir de notebooks/, a raiz do repo é a pasta acima
 import os, sys
 raiz_repo = os.path.dirname(os.getcwd())
@@ -29,9 +31,11 @@ import receita_download
 
 # COMMAND ----------
 
+# DBTITLE 1,Baixar recorte para o Volume
 manifesto = receita_download.baixar_recorte(mes, destino)
 
 # COMMAND ----------
 
+# DBTITLE 1,Conferir o Volume
 # Conferência: o que está no Volume agora
 display(dbutils.fs.ls(f"{destino}/{mes}/"))
