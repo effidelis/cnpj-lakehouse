@@ -1,0 +1,8 @@
+# Padroniza fim de linha em LF no repositório e na pasta de trabalho,
+# independente do sistema (o código roda em Linux no Databricks).
+* text=auto eol=lf
+
+# Arquivos binários: nunca converter
+*.pdf binary
+*.zip binary
+*.png binary

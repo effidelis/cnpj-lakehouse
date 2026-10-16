@@ -1,0 +1,15 @@
+# Dados brutos e intermediários nunca vão para o GitHub
+data/
+*.zip
+*.csv
+*.parquet
+
+# Credenciais e configurações locais
+.env
+.databrickscfg
+*.pem
+
+# Python
+__pycache__/
+.venv/
+.ipynb_checkpoints/
