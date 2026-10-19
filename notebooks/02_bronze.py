@@ -9,7 +9,8 @@
 # MAGIC - Idempotente: só extrai de novo se o ZIP mudou (SHA-256 do manifesto de download).
 # MAGIC - Lógica em `src/receita_extracao.py`.
 # MAGIC
-# MAGIC Etapa 2 (próximos commits): ler os CSVs como texto e gravar as tabelas Delta.
+# MAGIC Etapa 2: ler os CSVs como texto (separador `;`, latin-1, sem cabeçalho, nomes de `src/layout_receita.py`),
+# MAGIC acrescentar colunas de controle e gravar uma tabela Delta por tabela da Receita. Lógica em `src/bronze_receita.py`.
 
 # COMMAND ----------
 
@@ -30,6 +31,7 @@ raiz_repo = os.path.dirname(os.getcwd())
 sys.path.insert(0, os.path.join(raiz_repo, "src"))
 
 import receita_extracao
+import bronze_receita
 
 # COMMAND ----------
 
@@ -45,3 +47,31 @@ for nome_zip, r in sorted(extracao.items(), key=lambda kv: kv[1]["tabela"]):
     no_disco = os.path.getsize(f"{pasta_mes}/{r['csv']}")
     linhas.append((r["tabela"], r["csv"], no_disco, no_disco == r["tamanho_csv"]))
 display(spark.createDataFrame(linhas, "tabela string, csv string, bytes_no_disco long, bate_com_manifesto boolean"))
+
+# COMMAND ----------
+
+# DBTITLE 1,Gravar tabelas Delta no bronze
+tabelas = sorted({r["tabela"] for r in extracao.values()})
+for tabela in tabelas:
+    nome = bronze_receita.carregar_tabela(spark, pasta_mes, tabela, mes)
+    print(f"[ok] {nome}")
+
+# COMMAND ----------
+
+# DBTITLE 1,Conferir: linhas no CSV x linhas na tabela
+# Cada linha do CSV deve virar exatamente uma linha na tabela; linhas malformadas vão para a quarentena
+conferencia = []
+for tabela in tabelas:
+    linhas_csv = spark.read.text(f"{pasta_mes}/csv/{tabela}").count()
+    t = spark.table(f"cnpj.bronze.{tabela}").where(f"_mes_referencia = '{mes}'")
+    linhas_tabela = t.count()
+    corrompidas = t.where(f"{bronze_receita.COLUNA_CORROMPIDO} IS NOT NULL").count()
+    conferencia.append((tabela, linhas_csv, linhas_tabela, corrompidas, linhas_csv == linhas_tabela))
+display(spark.createDataFrame(conferencia,
+    "tabela string, linhas_csv long, linhas_tabela long, corrompidas long, bate boolean"))
+
+# COMMAND ----------
+
+# DBTITLE 1,Amostra: empresas
+# MAGIC %sql
+# MAGIC SELECT * FROM cnpj.bronze.empresas LIMIT 10
